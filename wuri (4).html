@@ -173,6 +173,7 @@ let modal = null;
 
 // ── 저장 (Firebase + localStorage 병행) ────────────────────
 let fbReady = false;
+let lkFilter = "";
 
 function saveToFB() {
   try { localStorage.setItem("wuri_data", JSON.stringify(D)); } catch(e) {}
@@ -676,18 +677,26 @@ function renderLK() {
     );
   });
 
-  let flt="";
+  // 전역 필터 사용 (이벤트 중복 방지)
   const fltSel=h("select",{style:{padding:"4px 8px",background:"#22263a",border:"1px solid #2e3352",borderRadius:"7px",color:"#e8eaf6",fontSize:"11px"}},
     h("option",{value:""},"전체"),h("option",{value:"income"},"수입"),h("option",{value:"expense"},"지출")
   );
+  fltSel.value = lkFilter;
+  
   const listWrap=h("div",{});
   function renderList(){
     listWrap.innerHTML="";
-    const list=[...D.txs].sort((a,b)=>b.dt.localeCompare(a.dt)).filter(t=>!flt||t.tp===flt);
+    const list=[...D.txs].sort((a,b)=>b.dt.localeCompare(a.dt)).filter(t=>!lkFilter||t.tp===lkFilter);
     if(!list.length){listWrap.appendChild(h("div",{style:{textAlign:"center",padding:"24px",color:"#8890b5",fontSize:"12px"}},"거래 없음"));return;}
     list.forEach(t=>{
       const ci=t.tp==="income"?IC.find(c=>c.k===t.ct):EC.find(c=>c.k===t.ct);
-      const delB=btn("✕","btn-x",()=>{D.txs=D.txs.filter(x=>x.id!==t.id);saveToFB();render();});
+      const tid=t.id;
+      const delB=h("button",{class:"btn-x"},  "✕");
+      delB.onclick=function(){
+        D.txs=D.txs.filter(x=>x.id!==tid);
+        saveToFB();
+        render();
+      };
       listWrap.appendChild(h("div",{class:"tx-item"},
         h("div",{class:"tx-icon",style:{background:t.tp==="income"?"rgba(76,175,136,.15)":"rgba(255,107,138,.15)"}},ci?.i||"📦"),
         h("div",{style:{flex:1}},
@@ -701,7 +710,7 @@ function renderLK() {
       ));
     });
   }
-  fltSel.addEventListener("change",e=>{flt=e.target.value;renderList();});
+  fltSel.onchange=function(e){lkFilter=e.target.value;renderList();};
   renderList();
 
   return h("div",{},
@@ -740,7 +749,9 @@ function renderLN() {
   const loanItems=D.loans.map(l=>{
     const p=l.og?((l.og-l.bl)/l.og*100).toFixed(0):0;
     const editB=btn("✏️","btn-e",()=>openLoanModal(l));
-    const delB=btn("✕","btn-x",()=>{D.loans=D.loans.filter(x=>x.id!==l.id);saveToFB();render();});
+    const lid2=l.id;
+    const delB=h("button",{class:"btn-x"},"✕");
+    delB.onclick=function(){D.loans=D.loans.filter(x=>x.id!==lid2);saveToFB();render();};
     return h("div",{style:{padding:"12px 15px",borderBottom:"1px solid rgba(46,51,82,.3)"}},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"6px"}},
         h("div",{},h("div",{style:{fontSize:"13px",fontWeight:600,marginBottom:"4px"}},l.nm),bdg(l.ct)),
@@ -788,7 +799,9 @@ function renderGL() {
   const cards=D.goals.map((g,i)=>{
     const pct=g.tg?Math.min(g.cv/g.tg*100,100).toFixed(0):0,col=GCOLS[i%GCOLS.length];
     const editB=btn("✏️","btn-e",()=>openGoalModal(g));
-    const delB=btn("✕","btn-x",()=>{D.goals=D.goals.filter(x=>x.id!==g.id);saveToFB();render();});
+    const gid=g.id;
+          const delB=h("button",{class:"btn-x"},"✕");
+          delB.onclick=function(){D.goals=D.goals.filter(x=>x.id!==gid);saveToFB();render();};
     return h("div",{class:"goal-card"},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"7px"}},
         h("div",{},h("div",{style:{fontSize:"13px",fontWeight:600}},g.nm),h("div",{style:{fontSize:"10px",color:"#8890b5",marginTop:"1px"}},g.dt||"기한 미설정")),
@@ -831,7 +844,9 @@ function renderFX() {
       });
     }
     const editB=btn("✏️","btn-e",()=>openFixedModal(fx));
-    const delB=btn("✕","btn-x",()=>{D.fixed=D.fixed.filter(x=>x.id!==fx.id);saveToFB();render();});
+    const fxid=fx.id;
+    const delB=h("button",{class:"btn-x"},"✕");
+    delB.onclick=function(){D.fixed=D.fixed.filter(x=>x.id!==fxid);saveToFB();render();};
     return h("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 15px",borderBottom:"1px solid rgba(46,51,82,.3)"}},
       h("div",{class:"tx-icon",style:{background:"rgba(255,107,138,.15)"}},ci.i),
       h("div",{style:{flex:1}},
