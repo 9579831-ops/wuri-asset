@@ -892,9 +892,13 @@ try {
   // 실시간 데이터 수신
   fbdb.ref("wuri").on("value", function(snap) {
     var val = snap.val();
-    if (val) {
+    if (val && val.assets && val.assets.length > 0) {
+      // Firebase에 데이터 있으면 사용
       D = val;
       try { localStorage.setItem("wuri", JSON.stringify(D)); } catch(e) {}
+    } else if (!val) {
+      // Firebase가 비어있으면 INIT 데이터를 Firebase에 저장
+      fbdb.ref("wuri").set(D);
     }
     if (!fbReady) {
       fbReady = true;
