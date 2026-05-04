@@ -314,7 +314,7 @@ function renderOV(wrap) {
   var box = document.createElement("div"); box.className = "box";
   box.innerHTML = '<div class="bh"><div class="bh-title">최근 거래</div></div>';
   if (!recent.length) {
-    box.innerHTML += '<div class="empty">거래 없음</div>';
+    var emptyEl = document.createElement("div"); emptyEl.className = "empty"; emptyEl.textContent = "거래 없음"; listBox.appendChild(emptyEl);
   } else {
     recent.forEach(function(t) {
       var d = document.createElement("div"); d.className = "item";
@@ -509,7 +509,7 @@ function renderFX(wrap) {
   box.innerHTML = '<div class="bh"><div class="bh-title">고정비용 목록</div></div>';
 
   if (!D.fixed || !D.fixed.length) {
-    box.innerHTML += '<div class="empty">고정비용을 추가해주세요</div>';
+    var emptyFX = document.createElement("div"); emptyFX.className = "empty"; emptyFX.textContent = "고정비용을 추가해주세요"; box.appendChild(emptyFX);
   } else {
     D.fixed.forEach(function(fx) {
       var applied = D.txs.some(function(t){return t.fixedId===fx.id && t.dt.slice(0,7)===ym;});
@@ -577,7 +577,8 @@ function renderLN(wrap) {
   bh.appendChild(addBtn); box.appendChild(bh);
 
   if (!D.loans.length) {
-    box.innerHTML += '<div class="empty">대출 정보를 추가해주세요</div>';
+    var emptyDiv = document.createElement("div"); emptyDiv.className = "empty"; emptyDiv.textContent = "대출 정보를 추가해주세요";
+    box.appendChild(emptyDiv);
   } else {
     D.loans.forEach(function(l) {
       var p = l.og ? ((l.og-l.bl)/l.og*100) : 0;
