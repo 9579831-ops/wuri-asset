@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>우리집 자산관리</title>
+<script>
+// Firebase SDK (모듈 방식 아닌 compat 버전)
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#0f1117;color:#e8eaf6;min-height:100vh;font-size:14px}
@@ -197,8 +202,14 @@ function fmt(n) {
 }
 function toDay() { return new Date().toISOString().slice(0,10); }
 function toMon() { return new Date().toISOString().slice(0,7); }
+var fbdb = null;
+var fbReady = false;
+
 function save() {
   try { localStorage.setItem("wuri", JSON.stringify(D)); } catch(e) {}
+  if (fbReady && fbdb) {
+    try { fbdb.ref("wuri").set(D); } catch(e) {}
+  }
 }
 function load() {
   try { var s = localStorage.getItem("wuri"); if(s) D = JSON.parse(s); } catch(e) {}
@@ -863,6 +874,66 @@ function openFixedModal(init) {
   var bg=document.createElement("div"); bg.className="modal-bg";
   bg.addEventListener("click",function(e){if(e.target===bg)closeModal();});
   bg.appendChild(modal); root.appendChild(bg);
+}
+
+// ===================== Firebase 초기화 =====================
+try {
+  firebase.initializeApp({
+    apiKey: "AIzaSyBQvgqGwV-1GZs1Zqj8B1KyETIjW0a1Xps",
+    authDomain: "wuri-asset.firebaseapp.com",
+    databaseURL: "https://wuri-asset-default-rtdb.firebaseio.com",
+    projectId: "wuri-asset",
+    storageBucket: "wuri-asset.firebasestorage.app",
+    messagingSenderId: "1049215486629",
+    appId: "1:1049215486629:web:de64ee60796885b7455b4c"
+  });
+  fbdb = firebase.database();
+
+  // 실시간 데이터 수신
+  fbdb.ref("wuri").on("value", function(snap) {
+    var val = snap.val();
+    if (val) {
+      D = val;
+      try { localStorage.setItem("wuri", JSON.stringify(D)); } catch(e) {}
+    }
+    if (!fbReady) {
+      fbReady = true;
+      updateSyncBadge(true);
+    }
+    renderTabs();
+    renderPage();
+  }, function(err) {
+    // Firebase 실패시 localStorage로
+    fbReady = false;
+    load();
+    renderTabs();
+    renderPage();
+  });
+} catch(e) {
+  load();
+  renderTabs();
+  renderPage();
+}
+
+function updateSyncBadge(connected) {
+  var logo = document.querySelector(".logo");
+  if (!logo) return;
+  var badge = logo.querySelector(".sync-badge");
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.className = "sync-badge";
+    badge.style.cssText = "font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px;font-weight:600";
+    logo.appendChild(badge);
+  }
+  if (connected) {
+    badge.textContent = "🔥 동기화중";
+    badge.style.background = "rgba(76,175,136,.15)";
+    badge.style.color = "#4caf88";
+  } else {
+    badge.textContent = "💾 로컬";
+    badge.style.background = "rgba(136,144,181,.15)";
+    badge.style.color = "#8890b5";
+  }
 }
 
 // ===================== 시작 =====================
