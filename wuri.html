@@ -205,14 +205,24 @@ function toMon() { return new Date().toISOString().slice(0,7); }
 var fbdb = null;
 var fbReady = false;
 
+function sanitize(data) {
+  if (!data) return;
+  if (!data.assets) data.assets = [];
+  if (!data.txs) data.txs = [];
+  if (!data.loans) data.loans = [];
+  if (!data.goals) data.goals = [];
+  if (!data.fixed) data.fixed = [];
+  if (!data.nid) data.nid = 200;
+}
 function save() {
+  sanitize(D);
   try { localStorage.setItem("wuri", JSON.stringify(D)); } catch(e) {}
   if (fbReady && fbdb) {
     try { fbdb.ref("wuri").set(D); } catch(e) {}
   }
 }
 function load() {
-  try { var s = localStorage.getItem("wuri"); if(s) D = JSON.parse(s); } catch(e) {}
+  try { var s = localStorage.getItem("wuri"); if(s) { D = JSON.parse(s); sanitize(D); } } catch(e) {}
 }
 function bdgEl(label) {
   var s = document.createElement("span");
@@ -268,14 +278,19 @@ function renderTabs() {
 // ===================== 페이지 렌더 =====================
 function renderPage() {
   var page = document.getElementById("page");
+  if (!page) return;
   page.innerHTML = '<div style="font-size:11px;color:#8890b5;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:11px">' + (TAB_NAMES[curTab]||"") + '</div>';
   var content = document.createElement("div");
-  if (curTab === "ov") renderOV(content);
-  else if (curTab === "as") renderAS(content);
-  else if (curTab === "lk") renderLK(content);
-  else if (curTab === "fx") renderFX(content);
-  else if (curTab === "ln") renderLN(content);
-  else if (curTab === "gl") renderGL(content);
+  try {
+    if (curTab === "ov") renderOV(content);
+    else if (curTab === "as") renderAS(content);
+    else if (curTab === "lk") renderLK(content);
+    else if (curTab === "fx") renderFX(content);
+    else if (curTab === "ln") renderLN(content);
+    else if (curTab === "gl") renderGL(content);
+  } catch(e) {
+    content.innerHTML = '<div style="padding:20px;color:#ff6b8a;font-size:13px;text-align:center">오류가 발생했어요. 새로고침해주세요.<br><small>' + e.message + '</small></div>';
+  }
   page.appendChild(content);
 }
 
@@ -321,9 +336,50 @@ function renderAS(wrap) {
   var tOv = D.assets.reduce(function(s,a){return s+a.ov;},0);
   var tG = tCv - tOv;
 
+  // ── 소유주별 요약 ──
+  var owSum = {};
+  D.assets.forEach(function(a){ owSum[a.ow] = (owSum[a.ow]||0) + a.cv; });
+  var owBox = document.createElement("div"); owBox.className = "box"; owBox.style.marginBottom = "12px";
+  owBox.innerHTML = '<div class="bh"><div class="bh-title">👤 소유주별 자산</div></div>';
+  var owBody = document.createElement("div"); owBody.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:0";
+  OWS.filter(function(o){ return owSum[o]; }).forEach(function(o) {
+    var pct = tCv ? (owSum[o]/tCv*100).toFixed(0) : 0;
+    var d = document.createElement("div"); d.style.cssText = "padding:11px 13px;border-bottom:1px solid rgba(46,51,82,.3);border-right:1px solid rgba(46,51,82,.3)";
+    d.innerHTML = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+OWC[o]+'"></span><span style="font-size:12px;font-weight:600">'+o+'</span></div>' +
+      '<div style="font-size:14px;font-weight:700;color:'+OWC[o]+'">'+fmt(owSum[o])+'</div>' +
+      '<div style="font-size:10px;color:#8890b5;margin-top:2px">전체의 '+pct+'%</div>';
+    owBody.appendChild(d);
+  });
+  owBox.appendChild(owBody);
+  wrap.appendChild(owBox);
+
+  // ── 분류별 요약 ──
+  var ctSum = {};
+  D.assets.forEach(function(a){ ctSum[a.ct] = (ctSum[a.ct]||0) + a.cv; });
+  var ctBox = document.createElement("div"); ctBox.className = "box"; ctBox.style.marginBottom = "12px";
+  ctBox.innerHTML = '<div class="bh"><div class="bh-title">📊 분류별 자산</div></div>';
+  var ctBody = document.createElement("div"); ctBody.style.padding = "11px 13px";
+  var maxCt = Math.max.apply(null, Object.values(ctSum).concat([1]));
+  Object.entries(ctSum).sort(function(a,b){return b[1]-a[1];}).forEach(function(entry) {
+    var ct = entry[0], v = entry[1];
+    var pct = tCv ? (v/tCv*100).toFixed(0) : 0;
+    var d = document.createElement("div"); d.style.marginBottom = "8px";
+    d.innerHTML = '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">' +
+      '<span>'+(AICO[ct]||"📦")+' '+ct+'</span>' +
+      '<span style="color:#8890b5">'+fmt(v)+' <span style="color:#6c7bff">'+pct+'%</span></span></div>';
+    var pb = document.createElement("div"); pb.className = "pb";
+    var pf = document.createElement("div"); pf.className = "pbf";
+    pf.style.width = (v/maxCt*100).toFixed(0)+"%";
+    pf.style.background = ACC[ct]||"#6c7bff";
+    pb.appendChild(pf); d.appendChild(pb); ctBody.appendChild(d);
+  });
+  ctBox.appendChild(ctBody);
+  wrap.appendChild(ctBox);
+
+  // ── 자산 목록 ──
   var box = document.createElement("div"); box.className = "box";
   var bh = document.createElement("div"); bh.className = "bh";
-  bh.innerHTML = '<div class="bh-title">자산 목록</div>';
+  bh.innerHTML = '<div class="bh-title">📋 자산 목록</div>';
   var addBtn = document.createElement("button"); addBtn.className = "btn-p"; addBtn.textContent = "+ 추가";
   addBtn.addEventListener("click", function(){ openAssetModal(null); });
   bh.appendChild(addBtn); box.appendChild(bh);
@@ -892,12 +948,13 @@ try {
   // 실시간 데이터 수신
   fbdb.ref("wuri").on("value", function(snap) {
     var val = snap.val();
-    if (val && val.assets && val.assets.length > 0) {
-      // Firebase에 데이터 있으면 사용
+    if (val && val.assets) {
       D = val;
+      sanitize(D);
       try { localStorage.setItem("wuri", JSON.stringify(D)); } catch(e) {}
-    } else if (!val) {
+    } else {
       // Firebase가 비어있으면 INIT 데이터를 Firebase에 저장
+      sanitize(D);
       fbdb.ref("wuri").set(D);
     }
     if (!fbReady) {
