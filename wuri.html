@@ -314,7 +314,7 @@ function renderOV(wrap) {
   var box = document.createElement("div"); box.className = "box";
   box.innerHTML = '<div class="bh"><div class="bh-title">최근 거래</div></div>';
   if (!recent.length) {
-    var emptyEl = document.createElement("div"); emptyEl.className = "empty"; emptyEl.textContent = "거래 없음"; listBox.appendChild(emptyEl);
+    var emptyEl = document.createElement("div"); emptyEl.className = "empty"; emptyEl.textContent = "거래 없음"; box.appendChild(emptyEl);
   } else {
     recent.forEach(function(t) {
       var d = document.createElement("div"); d.className = "item";
@@ -470,7 +470,7 @@ function renderLK(wrap) {
 
   var list = D.txs.slice().sort(function(a,b){return b.dt.localeCompare(a.dt);}).filter(function(t){return !lkFlt||t.tp===lkFlt;});
   if (!list.length) {
-    listBox.innerHTML += '<div class="empty">거래 없음</div>';
+    var emptyTx = document.createElement("div"); emptyTx.className = "empty"; emptyTx.textContent = "거래 없음"; listBox.appendChild(emptyTx);
   } else {
     list.forEach(function(t) {
       var ci = (t.tp==="income"?IC:EC).filter(function(c){return c.k===t.ct;})[0];
